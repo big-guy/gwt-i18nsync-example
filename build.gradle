@@ -1,0 +1,62 @@
+@CacheableTask
+class Localize extends DefaultTask {    
+    // TODO: This may be different for some localize tasks
+    @Internal
+    File generateInto = project.file("src")
+
+    @InputFiles
+    final ConfigurableFileCollection generatorClasspath = project.files()
+
+    @Input
+    final Property<String> generate = project.objects.property(String)
+
+    @OutputFile
+    final Provider<RegularFile> outputFile = project.layout.file(generate.map { className ->
+        def classNameToFileName = className.replace('.', '/')
+        return new File(generateInto, classNameToFileName + ".java")
+    })
+
+    @TaskAction
+    void generate() {
+        /* TODO: Use GWT I18NSync to generate the file
+        project.javaexec {
+            main = 'com.google.gwt.i18n.tools.I18NSync'
+            classpath = generatorClasspath
+            args = '-out', generateInto, generate.get(), '-createMessages' 
+        }
+        */
+        def generatedFile = outputFile.get().asFile
+
+        // TODO: Remove this and replace with javaexec above
+        generatedFile.text = """
+/*
+ * Interface to represent the constants contained in resource bundle:
+ *\t'/path/to/Strings.properties'
+*/
+foo bar other stuff in class
+"""
+        // end TODO
+
+        removeAbsolutePathFromGeneratedFile(generatedFile)
+    }
+
+    private void removeAbsolutePathFromGeneratedFile(File generatedFile) {
+        generatedFile.text = generatedFile.text - ~/ \*\t\'.+\.properties\'\n/
+    }
+}
+
+task localize(type: Localize) {
+    // TODO: 
+    // generatorClasspath.from(configurations.compileClasspath)
+    // generatorClasspath.from(sourceSets.main.output)
+    generate = "client.localization.Strings"
+}
+
+
+// NOTE: This is only for this example:
+task check {
+    dependsOn localize
+    doLast {
+        assert !tasks.localize.outputFile.get().asFile.text.contains("Strings.properties")
+    }
+}
