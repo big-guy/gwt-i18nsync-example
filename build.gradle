@@ -1,15 +1,27 @@
+/*
+ * Run GWT's I18NSync code generator to produce Java code from a properties file.
+ */
 @CacheableTask
 class Localize extends DefaultTask {    
     // TODO: This may be different for some localize tasks
     @Internal
     File generateInto = project.file("src")
 
+    /*
+     * This is the classpath of the code generator I18NSync
+     */
     @InputFiles
     final ConfigurableFileCollection generatorClasspath = project.files()
 
+    /*
+     * This is the fully qualified package and classname of the generated code
+     */
     @Input
     final Property<String> generate = project.objects.property(String)
 
+    /**
+     * Path to the generated source file
+     */
     @OutputFile
     final Provider<RegularFile> outputFile = project.layout.file(generate.map { className ->
         def classNameToFileName = className.replace('.', '/')
@@ -18,6 +30,11 @@ class Localize extends DefaultTask {
 
     @TaskAction
     void generate() {
+        def generatedFile = outputFile.get().asFile
+
+        // TODO: Remove this and replace with javaexec below
+        generateSourceFile(generatedFile)
+        
         /* TODO: Use GWT I18NSync to generate the file
         project.javaexec {
             main = 'com.google.gwt.i18n.tools.I18NSync'
@@ -25,9 +42,12 @@ class Localize extends DefaultTask {
             args = '-out', generateInto, generate.get(), '-createMessages' 
         }
         */
-        def generatedFile = outputFile.get().asFile
 
-        // TODO: Remove this and replace with javaexec above
+        removeAbsolutePathFromGeneratedFile(generatedFile)
+    }
+
+    // TODO: Remove this 
+    private void generateSourceFile(File generatedFile) {
         generatedFile.text = """
 /*
  * Interface to represent the constants contained in resource bundle:
@@ -35,9 +55,6 @@ class Localize extends DefaultTask {
 */
 foo bar other stuff in class
 """
-        // end TODO
-
-        removeAbsolutePathFromGeneratedFile(generatedFile)
     }
 
     private void removeAbsolutePathFromGeneratedFile(File generatedFile) {
